@@ -1,9 +1,9 @@
 {
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "cd yt-vocal-cleaner && npm install"
+    "buildCommand": "npm install"
   },
   "deploy": {
-    "startCommand": "cd yt-vocal-cleaner && npm start"
+    "startCommand": "npm start"
   }
 }
