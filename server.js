@@ -1,11 +1,8 @@
 import express from "express";
 import cors from "cors";
-import fetch from "node-fetch";
-import ytdl from "ytdl-core";
 import { spawn } from "child_process";
 import fs from "fs";
 import path from "path";
-import multer from "multer";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -13,8 +10,6 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
-
-const upload = multer({ dest: "uploads/" });
 
 function cleanFile(filePath) {
   if (fs.existsSync(filePath)) {
@@ -26,26 +21,35 @@ app.post("/api/process-youtube", async (req, res) => {
   try {
     const { url } = req.body;
 
-    if (!url || !ytdl.validateURL(url)) {
+    if (!url) {
       return res.status(400).json({ error: "Invalid YouTube URL" });
     }
 
-    const id = ytdl.getURLVideoID(url);
     const tempDir = "temp";
     if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir);
 
+    const id = Date.now().toString();
     const inputPath = path.join(tempDir, `${id}-input.mp3`);
     const outputPath = path.join(tempDir, `${id}-vocals.wav`);
 
-    const audioStream = ytdl(url, {
-      quality: "highestaudio",
-      filter: "audioonly"
-    });
+    // -----------------------------
+    // 1) تحميل الصوت باستخدام yt-dlp
+    // -----------------------------
+    const ytdlp = spawn("yt-dlp", [
+      "-f", "bestaudio",
+      "-o", inputPath,
+      url
+    ]);
 
-    const writeStream = fs.createWriteStream(inputPath);
-    audioStream.pipe(writeStream);
+    ytdlp.on("close", (code) => {
+      if (code !== 0) {
+        cleanFile(inputPath);
+        return res.status(500).json({ error: "Failed to download audio" });
+      }
 
-    writeStream.on("finish", () => {
+      // -----------------------------
+      // 2) تشغيل سكربت Python لعزل الصوت
+      // -----------------------------
       const py = spawn("python", [
         "process_audio.py",
         inputPath,
@@ -65,11 +69,6 @@ app.post("/api/process-youtube", async (req, res) => {
       });
     });
 
-    writeStream.on("error", () => {
-      cleanFile(inputPath);
-      res.status(500).json({ error: "Failed to download audio" });
-    });
-
   } catch (e) {
     res.status(500).json({ error: "Server error" });
   }
@@ -87,7 +86,6 @@ app.get("/stream-audio/:id", (req, res) => {
   const stream = fs.createReadStream(filePath);
   stream.pipe(res);
 });
-// test redeploy
 
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
