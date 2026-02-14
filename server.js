@@ -25,6 +25,7 @@ function cleanFile(filePath) {
 app.post("/api/process-youtube", async (req, res) => {
   try {
     const { url } = req.body;
+
     if (!url || !ytdl.validateURL(url)) {
       return res.status(400).json({ error: "Invalid YouTube URL" });
     }
@@ -68,6 +69,7 @@ app.post("/api/process-youtube", async (req, res) => {
       cleanFile(inputPath);
       res.status(500).json({ error: "Failed to download audio" });
     });
+
   } catch (e) {
     res.status(500).json({ error: "Server error" });
   }
@@ -76,12 +78,16 @@ app.post("/api/process-youtube", async (req, res) => {
 app.get("/stream-audio/:id", (req, res) => {
   const { id } = req.params;
   const filePath = path.join("temp", `${id}-vocals.wav`);
+
   if (!fs.existsSync(filePath)) {
     return res.status(404).send("Not found");
   }
+
   res.setHeader("Content-Type", "audio/wav");
   const stream = fs.createReadStream(filePath);
   stream.pipe(res);
 });
 
-app.listen(PORT, () => {});
+app.listen(PORT, () => {
+  console.log("Server running on port " + PORT);
+});
