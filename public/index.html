@@ -5,6 +5,8 @@
   <title>مشغل يوتيوب بدون موسيقى</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- YouTube Player API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
@@ -48,6 +50,11 @@
       </div>
     </div>
 
+    <!-- مشغل الفيديو -->
+    <div class="w-full rounded-3xl overflow-hidden bg-black aspect-video">
+      <div id="yt-player"></div>
+    </div>
+
     <div class="space-y-4">
       <label class="block text-sm font-medium text-gray-700">
         رابط مقطع يوتيوب
@@ -63,7 +70,7 @@
           id="process-btn"
           class="apple-button rounded-2xl px-5 py-3 bg-slate-900 text-white text-sm md:text-base font-medium flex items-center justify-center gap-2 active:scale-[0.98] transition"
         >
-          <span>تشغيل بدون موسيقى</span>
+          <span>تشغيل الفيديو + الصوت البشري</span>
         </button>
       </div>
       <p id="status" class="text-xs md:text-sm text-gray-500 h-5 flex items-center"></p>
@@ -93,6 +100,8 @@
     const player = document.getElementById("player");
     const timeLabel = document.getElementById("time-label");
 
+    let ytPlayer = null;
+
     function setStatus(msg, type = "info") {
       statusEl.textContent = msg || "";
       statusEl.className =
@@ -117,12 +126,42 @@
       timeLabel.textContent = `${cur} / ${dur}`;
     });
 
+    // استخراج ID الفيديو من رابط يوتيوب
+    function extractVideoID(url) {
+      const match = url.match(/v=([^&]+)/);
+      return match ? match[1] : null;
+    }
+
+    // تشغيل فيديو اليوتيوب داخل المشغل
+    function loadYoutubeVideo(url) {
+      const videoId = extractVideoID(url);
+      if (!videoId) {
+        setStatus("الرابط غير صحيح. تأكدي من رابط اليوتيوب.", "error");
+        return false;
+      }
+
+      if (ytPlayer) {
+        ytPlayer.loadVideoById(videoId);
+      } else {
+        ytPlayer = new YT.Player("yt-player", {
+          height: "360",
+          width: "640",
+          videoId: videoId
+        });
+      }
+      return true;
+    }
+
     async function processUrl() {
       const url = urlInput.value.trim();
       if (!url) {
         setStatus("الرجاء إدخال رابط يوتيوب.", "error");
         return;
       }
+
+      // أولاً: تشغيل الفيديو داخل الصفحة
+      const ok = loadYoutubeVideo(url);
+      if (!ok) return;
 
       processBtn.disabled = true;
       processBtn.classList.add("opacity-60", "cursor-not-allowed");
