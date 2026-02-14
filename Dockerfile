@@ -10,10 +10,13 @@ RUN pip install yt-dlp
 WORKDIR /app
 
 # نسخ ملفات المشروع
-COPY . .
-
-# تثبيت باكجات npm
+COPY package*.json ./
 RUN npm install
 
+COPY . .
+
+# فتح البورت
+EXPOSE 3000
+
 # تشغيل السيرفر
-CMD ["npm", "start"]
+CMD ["node", "server.js"]
