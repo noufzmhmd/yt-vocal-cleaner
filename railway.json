@@ -7,11 +7,15 @@
     "startCommand": "npm start"
   },
   "nixpacks": {
-    "packages": [
-      "ffmpeg",
-      "yt-dlp",
-      "python3",
-      "python3-pip"
-    ]
+    "phases": {
+      "setup": {
+        "aptPackages": [
+          "ffmpeg",
+          "yt-dlp",
+          "python3",
+          "python3-pip"
+        ]
+      }
+    }
   }
 }
