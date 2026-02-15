@@ -1,13 +1,16 @@
-FROM python:3.10-slim
+FROM node:18-slim
 
-RUN apt-get update && apt-get install -y ffmpeg yt-dlp
+# تثبيت Python + ffmpeg + yt-dlp
+RUN apt-get update && apt-get install -y \
+    python3 python3-pip ffmpeg yt-dlp && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN pip install spleeter
+# تثبيت Spleeter
+RUN pip3 install spleeter
 
 WORKDIR /app
 
 COPY package*.json ./
-RUN apt-get install -y nodejs npm
 RUN npm install
 
 COPY . .
