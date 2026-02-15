@@ -32,10 +32,8 @@ app.post("/api/process-youtube", async (req, res) => {
     const inputPath = path.join(tempDir, `${id}-input.mp3`);
     const outputPath = path.join(tempDir, `${id}-vocals.wav`);
 
-    // -----------------------------
-    // 1) تحميل الصوت باستخدام yt-dlp من داخل المشروع
-    // -----------------------------
-    const ytdlpPath = "./bin/yt-dlp";
+    // مسار yt-dlp المثبت من apt داخل الحاوية
+    const ytdlpPath = "/usr/bin/yt-dlp";
 
     const ytdlp = spawn(ytdlpPath, [
       "-f", "bestaudio",
@@ -49,9 +47,6 @@ app.post("/api/process-youtube", async (req, res) => {
         return res.status(500).json({ error: "Failed to download audio" });
       }
 
-      // -----------------------------
-      // 2) تشغيل سكربت Python لعزل الصوت
-      // -----------------------------
       const py = spawn("python3", [
         "process_audio.py",
         inputPath,
