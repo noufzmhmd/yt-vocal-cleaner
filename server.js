@@ -32,10 +32,7 @@ app.post("/api/process-youtube", async (req, res) => {
     const inputPath = path.join(tempDir, `${id}-input.mp3`);
     const outputPath = path.join(tempDir, `${id}-vocals.wav`);
 
-    // مسار yt-dlp المثبت من apt داخل الحاوية
-    const ytdlpPath = "/usr/bin/yt-dlp";
-
-    const ytdlp = spawn(ytdlpPath, [
+    const ytdlp = spawn("/usr/bin/yt-dlp", [
       "-f", "bestaudio",
       "-o", inputPath,
       url
