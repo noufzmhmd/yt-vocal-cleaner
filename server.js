@@ -1,8 +1,9 @@
 import express from "express";
 import cors from "cors";
-import { spawn } from "child_process";
+import fetch from "node-fetch";
 import fs from "fs";
 import path from "path";
+import { spawn } from "child_process";
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -10,12 +11,6 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json());
 app.use(express.static("public"));
-
-function cleanFile(filePath) {
-  if (fs.existsSync(filePath)) {
-    fs.unlink(filePath, () => {});
-  }
-}
 
 app.post("/api/process-youtube", async (req, res) => {
   try {
@@ -32,34 +27,43 @@ app.post("/api/process-youtube", async (req, res) => {
     const inputPath = path.join(tempDir, `${id}-input.mp3`);
     const outputPath = path.join(tempDir, `${id}-vocals.wav`);
 
-    const ytdlp = spawn("/usr/bin/yt-dlp", [
+    // 1) تحميل الصوت من يوتيوب
+    const ytdlp = spawn("yt-dlp", [
       "-f", "bestaudio",
       "-o", inputPath,
       url
     ]);
 
-    ytdlp.on("close", (code) => {
+    ytdlp.on("close", async (code) => {
       if (code !== 0) {
-        cleanFile(inputPath);
         return res.status(500).json({ error: "Failed to download audio" });
       }
 
-      const py = spawn("python3", [
-        "process_audio.py",
-        inputPath,
-        outputPath
-      ]);
+      // 2) رفع الصوت إلى VocalRemover API
+      const fileData = fs.readFileSync(inputPath);
 
-      py.on("close", (code) => {
-        if (code !== 0) {
-          cleanFile(inputPath);
-          cleanFile(outputPath);
-          return res.status(500).json({ error: "Audio processing failed" });
-        }
+      const response = await fetch("https://api.vocalremover.org/upload", {
+        method: "POST",
+        headers: {
+          "Content-Type": "audio/mpeg"
+        },
+        body: fileData
+      });
 
-        res.json({
-          audioUrl: `/stream-audio/${id}`
-        });
+      const result = await response.json();
+
+      if (!result?.vocals_url) {
+        return res.status(500).json({ error: "Audio processing failed" });
+      }
+
+      // 3) تحميل الصوت البشري الناتج
+      const vocalsRes = await fetch(result.vocals_url);
+      const vocalsBuffer = await vocalsRes.arrayBuffer();
+
+      fs.writeFileSync(outputPath, Buffer.from(vocalsBuffer));
+
+      res.json({
+        audioUrl: `/stream-audio/${id}`
       });
     });
 
