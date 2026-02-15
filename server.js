@@ -33,9 +33,11 @@ app.post("/api/process-youtube", async (req, res) => {
     const outputPath = path.join(tempDir, `${id}-vocals.wav`);
 
     // -----------------------------
-    // 1) تحميل الصوت باستخدام yt-dlp
+    // 1) تحميل الصوت باستخدام yt-dlp من داخل المشروع
     // -----------------------------
-    const ytdlp = spawn("yt-dlp", [
+    const ytdlpPath = "./bin/yt-dlp";
+
+    const ytdlp = spawn(ytdlpPath, [
       "-f", "bestaudio",
       "-o", inputPath,
       url
@@ -50,7 +52,7 @@ app.post("/api/process-youtube", async (req, res) => {
       // -----------------------------
       // 2) تشغيل سكربت Python لعزل الصوت
       // -----------------------------
-      const py = spawn("python", [
+      const py = spawn("python3", [
         "process_audio.py",
         inputPath,
         outputPath
