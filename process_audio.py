@@ -1,18 +1,6 @@
 import sys
-import torch
-import torchaudio
 import os
-
-def load_audio(path, sr=44100):
-    wav, source_sr = torchaudio.load(path)
-    if source_sr != sr:
-        wav = torchaudio.functional.resample(wav, source_sr, sr)
-    if wav.shape[0] > 2:
-        wav = wav[:2, :]
-    return wav, sr
-
-def save_audio(path, wav, sr=44100):
-    torchaudio.save(path, wav, sr)
+import subprocess
 
 def main():
     if len(sys.argv) < 3:
@@ -21,34 +9,26 @@ def main():
     input_path = sys.argv[1]
     output_path = sys.argv[2]
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
+    # تشغيل Spleeter لفصل الصوت
+    try:
+        subprocess.run([
+            "spleeter", "separate",
+            "-p", "spleeter:2stems",
+            "-o", "temp",
+            input_path
+        ], check=True)
 
-    model = torch.hub.load(
-        "facebookresearch/demucs",
-        "htdemucs",
-        source="github"
-    ).to(device)
-    model.eval()
+        # الملف الناتج يكون داخل temp/<filename>/vocals.wav
+        base = os.path.splitext(os.path.basename(input_path))[0]
+        vocals_path = f"temp/{base}/vocals.wav"
 
-    wav, sr = load_audio(input_path)
-    wav = wav.to(device)
+        if not os.path.exists(vocals_path):
+            sys.exit(1)
 
-    with torch.no_grad():
-        out = model(wav.unsqueeze(0))
-    sources = out[0]
+        os.rename(vocals_path, output_path)
 
-    stems = {
-      "drums": 0,
-      "bass": 1,
-      "other": 2,
-      "vocals": 3
-    }
-
-    vocals = sources[stems["vocals"]].detach().cpu()
-    vocals = vocals.unsqueeze(0)
-
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    save_audio(output_path, vocals, sr)
+    except Exception:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
